@@ -47,7 +47,8 @@ if($a==='seznam'){
     $o=['id'=>$it['id'],'ts'=>$it['ts'],'c'=>$it['c'],'p'=>$it['p'],'t'=>$it['t'],'title'=>$it['title'],'text'=>$it['text'],'src'=>$it['src'],'host'=>$it['host']];
     if(!empty($it['brk']))$o['brk']=1;if(!empty($it['mt']))$o['mt']=$it['mt'];
     if(!empty($it['audio']))$o['audio']=['url'=>'api/vysilani.php?a=zvuk&id='.$it['id'].'&v='.$it['audio']['v'],'dur'=>$it['audio']['dur'],'words'=>$it['audio']['words']];
-    if(!empty($it['tr']))$o['tr']=$it['tr'];
+    /* jen překlady, které prošly kontrolou jmen ve výrobně (engine argos2); vynechané a staré neukazujeme */
+    $tr=[];foreach((array)$it['tr'] as $l=>$t){if(empty($t['skip'])&&($t['engine']??'')!=='argos')$tr[$l]=$t;}if($tr)$o['tr']=$tr;
     $L[]=$o;}
   usort($L,function($x,$y){return $y['ts']<=>$x['ts'];});
   out(['ok'=>true,'now'=>time(),'items'=>array_slice($L,0,80)],'public, max-age=60');
@@ -94,10 +95,10 @@ if($a==='smaz'){
 if($a==='stav'){
   if(!$studio&&!$vyr)fail('Jen pro studio.');
   $idx=read_index();$n=count($idx['items']);$au=0;$tr=[];
-  foreach($idx['items'] as $it){if(!empty($it['audio']))$au++;foreach((array)$it['tr'] as $l=>$_)$tr[$l]=($tr[$l]??0)+1;}
+  foreach($idx['items'] as $it){if(!empty($it['audio']))$au++;foreach((array)$it['tr'] as $l=>$t)if(empty($t['skip'])&&($t['engine']??'')!=='argos')$tr[$l]=($tr[$l]??0)+1;}
   $st=null;if(isset($_GET['ids'])){$st=[];$vh=(array)($idx['vyrobna']['hlasy']??[]);
     foreach(array_slice(explode(',',(string)$_GET['ids']),0,100) as $id){$id=slug($id);$it=$idx['items'][$id]??null;if(!$it)continue;
-      $st[$id]=['hlas'=>!empty($it['audio']),'umi'=>in_array($it['host'],$vh,true),'tr'=>array_keys((array)$it['tr'])];}}
+      $st[$id]=['hlas'=>!empty($it['audio']),'umi'=>in_array($it['host'],$vh,true),'tr'=>array_keys(array_filter((array)$it['tr'],function($t){return empty($t['skip'])&&($t['engine']??'')!=='argos';}))];}}
   out(['ok'=>true,'polozek'=>$n,'s_hlasem'=>$au,'preklady'=>$tr,'vyrobna'=>$idx['vyrobna'],'stav'=>$st]);
 }
 
@@ -109,7 +110,7 @@ if($a==='ukoly'){
   $L=[];
   with_index(function(&$idx)use($hl,$jz,&$L){
     $idx['vyrobna']=['kdy'=>time(),'verze'=>substr((string)($_SERVER['HTTP_X_NTV_VERZE']??''),0,40),'hlasy'=>array_values($hl),'jazyky'=>array_values($jz)];
-    foreach($idx['items'] as $it){$needA=empty($it['audio'])&&in_array($it['host'],$hl,true);$needT=array_values(array_filter($jz,function($l)use($it){return !isset(((array)$it['tr'])[$l]);}));
+    foreach($idx['items'] as $it){$needA=empty($it['audio'])&&in_array($it['host'],$hl,true);$needT=array_values(array_filter($jz,function($l)use($it){$t=((array)$it['tr'])[$l]??null;return !$t||(($t['engine']??'')==='argos');}));
       if($needA||$needT)$L[]=['id'=>$it['id'],'ts'=>$it['ts'],'title'=>$it['title'],'text'=>$it['text'],'host'=>$it['host'],'hlas'=>$needA,'jazyky'=>$needT];}});
   usort($L,function($x,$y){return $y['ts']<=>$x['ts'];});
   out(['ok'=>true,'ukoly'=>array_slice($L,0,40)]);
@@ -127,8 +128,9 @@ if($a==='hlas'){
 if($a==='preklad'){
   $in=body();$id=slug($in['id']??'');$l=preg_replace('/[^a-z]/','',(string)($in['lang']??''));
   if(strlen($l)!==2)fail('Neplatný jazyk.');
-  $t=['title'=>clean($in['title']??'',400),'text'=>clean($in['text']??'',4000),'engine'=>clean($in['engine']??'',30)];
-  if($t['title']==='')fail('Prázdný překlad.');
+  if(!empty($in['skip']))$t=['skip'=>1,'engine'=>clean($in['engine']??'',30),'why'=>clean($in['why']??'',200)];
+  else{$t=['title'=>clean($in['title']??'',400),'text'=>clean($in['text']??'',4000),'engine'=>clean($in['engine']??'',30)];
+    if($t['title']==='')fail('Prázdný překlad.');}
   $ok=with_index(function(&$idx)use($id,$l,$t){if(!isset($idx['items'][$id]))return false;$tr=(array)$idx['items'][$id]['tr'];$tr[$l]=$t;$idx['items'][$id]['tr']=$tr;return true;});
   $ok?out(['ok'=>true]):fail('Položka už neexistuje.');
 }
