@@ -75,17 +75,17 @@ if($a==='publikuj'){
   if(!$studio)fail('Publikovat může jen přihlášené studio.');
   $in=body();$items=array_slice((array)($in['items']??[]),0,80);if(!$items)fail('Žádné položky.');
   $C=['domaci','zahranici','region','zdravi','ekonomika','kultura','sport','pocasi','ostatni'];
-  $n=0;$new=0;
-  with_index(function(&$idx)use($items,$C,&$n,&$new){
+  $n=0;$new=0;$ids=[];
+  with_index(function(&$idx)use($items,$C,&$n,&$new,&$ids){
     foreach($items as $x){$title=clean($x['title']??'',300);$text=clean($x['text']??'',3000);if($title==='')continue;
       $host=slug($x['host']??'tereza',20)?:'tereza';$id=substr(sha1($title."\n".$text."\n".$host),0,16);
       $c=in_array($x['c']??'',$C,true)?$x['c']:'ostatni';
-      $old=$idx['items'][$id]??null;if(!$old)$new++;
+      $old=$idx['items'][$id]??null;if(!$old)$new++;$ids[]=$id;
       $idx['items'][$id]=['id'=>$id,'ts'=>$old['ts']??time(),'c'=>$c,'p'=>slug($x['p']??'info',16)?:'info','t'=>slug($x['t']??'neutral',16)?:'neutral',
         'title'=>$title,'text'=>$text,'src'=>clean($x['src']??'',300),'host'=>$host,'brk'=>!empty($x['brk']),'mt'=>clean($x['mt']??'',40),
         'audio'=>$old['audio']??null,'tr'=>$old['tr']??new stdClass()];$n++;}
   });
-  out(['ok'=>true,'n'=>$n,'new'=>$new]);
+  out(['ok'=>true,'n'=>$n,'new'=>$new,'ids'=>$ids]);
 }
 if($a==='smaz'){
   if(!$studio)fail('Jen pro studio.');$id=slug(body()['id']??'');
@@ -95,7 +95,10 @@ if($a==='stav'){
   if(!$studio&&!$vyr)fail('Jen pro studio.');
   $idx=read_index();$n=count($idx['items']);$au=0;$tr=[];
   foreach($idx['items'] as $it){if(!empty($it['audio']))$au++;foreach((array)$it['tr'] as $l=>$_)$tr[$l]=($tr[$l]??0)+1;}
-  out(['ok'=>true,'polozek'=>$n,'s_hlasem'=>$au,'preklady'=>$tr,'vyrobna'=>$idx['vyrobna']]);
+  $st=null;if(isset($_GET['ids'])){$st=[];$vh=(array)($idx['vyrobna']['hlasy']??[]);
+    foreach(array_slice(explode(',',(string)$_GET['ids']),0,100) as $id){$id=slug($id);$it=$idx['items'][$id]??null;if(!$it)continue;
+      $st[$id]=['hlas'=>!empty($it['audio']),'umi'=>in_array($it['host'],$vh,true),'tr'=>array_keys((array)$it['tr'])];}}
+  out(['ok'=>true,'polozek'=>$n,'s_hlasem'=>$au,'preklady'=>$tr,'vyrobna'=>$idx['vyrobna'],'stav'=>$st]);
 }
 
 /* ---------- výrobna ---------- */
