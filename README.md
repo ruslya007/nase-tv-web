@@ -13,3 +13,4 @@ Stránky jsou sestavené a minifikované z vývojové verze. Data studia se zat�
 ## Silniční oko (pilot)
 - `oko/` – v0.1: detekce objektů a rychlost mezi dvěma branami
 - `oko/v2/` – v0.2: 3D odhad rychlosti, galerie vozidel a učení z potvrzených modelů
+- `oko/v3/` – v0.3: přepínání kamer, nahrávání, analýza činnosti člověka (pozice, pád, gesta, chůze) s učením z potvrzení
