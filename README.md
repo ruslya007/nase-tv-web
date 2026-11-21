@@ -16,3 +16,4 @@ Stránky jsou sestavené a minifikované z vývojové verze. Data studia se zat�
 - `oko/v3/` – v0.3: přepínání kamer, nahrávání, analýza činnosti člověka (pozice, pád, gesta, chůze) s učením z potvrzení
 - `oko/v4/` – v0.4: klepnutí na neznámý předmět, návrhy názvu, vlastní databáze naučených věcí
 - `oko/v5/` – v0.5: HUD s GPS a OpenStreetMap, okraje silnice, pruhy, zvýraznění překážek
+- `oko/v6/` – v0.6: režimy Doma / Jedu autem / Ochrana perimetru, hlídání s nahráváním a databází událostí
